@@ -1,44 +1,42 @@
 
 #include <stdio.h>
-#include <protobuf-c-rpc/protobuf-c-rpc.h>
-#include "github.com/ligato/vpp-agent/plugins/vpp/model/rpc/rpc.pb-c.h"
-
-static void
-do_nothing (ProtobufCRPCDispatch *dispatch, void *unused)
-{
-    /* empty */
-}
-
-static void
-run_main_loop_without_blocking (ProtobufCRPCDispatch *dispatch)
-{
-    protobuf_c_rpc_dispatch_add_idle (dispatch, do_nothing, NULL);
-    protobuf_c_rpc_dispatch_run (dispatch);
-}
+#include "github.com/ligato/vpp-agent/plugins/vpp/model/rpc/rpc.grpc-c.h"
 
 int main()
 {
-    ProtobufC_RPC_Client *client;
-    ProtobufCService *service;
-    ProtobufC_RPC_AddressType address_type=0;
-    char *name = "127.0.0.1:9111";
+    grpc_c_client_t *client;
+    grpc_c_init(GRPC_THREADS, NULL);
 
-    service = protobuf_c_rpc_client_new (address_type, name,
-            &rpc__data_change_service__descriptor, NULL);
-    if (service == NULL) {
-        fprintf(stderr, "service error!\n");
-        return 1;
+    client = grpc_c_client_init_by_host("localhost:9111", "strongswan", NULL,
+            NULL);
+
+    Rpc__PutResponse *rsp = NULL;
+    Rpc__DataRequest rq = RPC__DATA_REQUEST__INIT;
+    Interfaces__Interfaces__Interface iface = INTERFACES__INTERFACES__INTERFACE__INIT;
+
+    iface.name = "tap0";
+    iface.has_enabled = 1;
+    iface.enabled = 1;
+    iface.has_type = 1;
+    iface.type = INTERFACES__INTERFACE_TYPE__TAP_INTERFACE;
+    iface.phys_address = "12:E4:0E:D5:BC:DC";
+    iface.n_ip_addresses = 1;
+    iface.ip_addresses = calloc(1, sizeof(char *));
+    iface.ip_addresses[0] = "192.168.20.3/24";
+
+    iface.tap = calloc(1, sizeof(Interfaces__Interfaces__Interface__Tap));
+    interfaces__interfaces__interface__tap__init(iface.tap);
+    iface.tap->host_if_name = "tap-host";
+
+    rq.n_interfaces = 1;
+    rq.interfaces = calloc(1, sizeof(Interfaces__Interfaces__Interface *));
+    rq.interfaces[0] = &iface;
+
+    int status = rpc__data_change_service__put(client, NULL, 0, &rq, &rsp, NULL, -1);
+    if (rsp) {
+        printf("reply\n");
     }
-    client = (ProtobufC_RPC_Client *) service;
-    protobuf_c_rpc_client_set_autoreconnect_period (client, 1);
-    fprintf (stderr, "Connecting... ");
-
-    while (!protobuf_c_rpc_client_is_connected (client))
-        protobuf_c_rpc_dispatch_run (protobuf_c_rpc_dispatch_default ());
-
-    fprintf (stderr, "done.\n");
-
-    run_main_loop_without_blocking (protobuf_c_rpc_dispatch_default ());
+    printf("Finished with %d\n", status);
 
     return 0;
 }
