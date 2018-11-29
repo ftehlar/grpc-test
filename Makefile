@@ -1,5 +1,5 @@
 
-VPP_AGENT_PROJ_DIR=/home/vagrant/download
+VPP_AGENT_PROJ_DIR=/home/vagrant/download/ccnf/strongswan/third_party/vpp-agent
 INCLUDE_PREFIX=github.com/ligato/vpp-agent
 
 VPP_AGENT_API_DIR=${VPP_AGENT_PROJ_DIR}/${INCLUDE_PREFIX}
@@ -12,6 +12,8 @@ LINUX_PROTO_OUT=`pwd`/${LINUX_MODEL_PATH}
 
 VPP_API=${VPP_AGENT_PROJ_DIR}/${VPP_MODEL_PATH}
 LINUX_API=${VPP_AGENT_PROJ_DIR}/${LINUX_MODEL_PATH}
+
+PROTOC=protoc
 
 vpp_plugins=\
 	 acl	\
@@ -43,7 +45,7 @@ $(addsuffix .vpp, $(vpp_plugins)):
 	# protoc-c --c_out=${VPP_PROTO_OUT}/$(basename $@) -I${VPP_API}/$(basename $@) \
 	# 	${VPP_API}/$(basename $@)/$(basename $@).proto
 	#
-	protoc -I ${VPP_API}/$(basename $@) --grpc-c_out=${VPP_PROTO_OUT}/$(basename $@) \
+	$(PROTOC) -I ${VPP_API}/$(basename $@) --grpc-c_out=${VPP_PROTO_OUT}/$(basename $@) \
 				--plugin=protoc-gen-grpc-c=/usr/local/bin/protoc-gen-grpc-c \
 				${VPP_API}/$(basename $@)/$(basename $@).proto
 
@@ -51,7 +53,7 @@ $(addsuffix .linux, $(linux_plugins)):
 	mkdir -p ${LINUX_PROTO_OUT}/$(basename $@)
 	# protoc-c --c_out=${LINUX_PROTO_OUT}/$(basename $@) -I${LINUX_API}/$(basename $@) \
 	# 	${LINUX_API}/$(basename $@)/$(basename $@).proto
-	protoc -I ${LINUX_API}/$(basename $@) --grpc-c_out=${LINUX_PROTO_OUT}/$(basename $@) \
+	$(PROTOC) -I ${LINUX_API}/$(basename $@) --grpc-c_out=${LINUX_PROTO_OUT}/$(basename $@) \
 				--plugin=protoc-gen-grpc-c=/usr/local/bin/protoc-gen-grpc-c \
 				${LINUX_API}/$(basename $@)/$(basename $@).proto
 
@@ -59,7 +61,7 @@ gen-proto: $(addsuffix .vpp, $(vpp_plugins)) $(addsuffix .linux, $(linux_plugins
 	mkdir -p ${VPP_PROTO_OUT}/rpc
 	mkdir -p ${LINUX_PROTO_OUT}
 	#protoc-c --c_out=. -I${VPP_AGENT_PROJ_DIR} -I${VPP_API} ${VPP_API}/rpc/rpc.proto
-	protoc -I ${VPP_API}  -I${VPP_AGENT_PROJ_DIR} --grpc-c_out=${VPP_PROTO_OUT} \
+	$(PROTOC) -I ${VPP_API}  -I${VPP_AGENT_PROJ_DIR} --grpc-c_out=${VPP_PROTO_OUT} \
 				--plugin=protoc-gen-grpc-c=/usr/local/bin/protoc-gen-grpc-c \
 				${VPP_API}/rpc/rpc.proto
 
